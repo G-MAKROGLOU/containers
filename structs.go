@@ -21,6 +21,8 @@ type ImageBuildOut struct {
 	Id             string         `json:"id"`
 	Progress       string         `json:"progress,omitempty"`
 	ProgressDetail ProgressDetail `json:"progressDetail,omitempty,mapstructure,squash"`
+	// Error is populated by the Docker daemon when a build step fails.
+	Error string `json:"error,omitempty"`
 }
 
 type ProgressDetail struct {

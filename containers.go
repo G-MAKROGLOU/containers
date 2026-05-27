@@ -77,12 +77,22 @@ func BuildImage(path string, imageName string) error {
 	if imgErr != nil {
 		return errors.New("[ERR:] [DOCKER] => FAILED TO BUILD IMAGE " + imageName + " => " + imgErr.Error())
 	}
+	defer image.Body.Close()
+
+	// Drain the build output stream. The Docker daemon streams build progress as
+	// individual JSON objects; error messages arrive the same way with an "error"
+	// field set, so we must check every decoded frame.
 	for {
 		var buildOut ImageBuildOut
-		outErr := json.NewDecoder(image.Body).Decode(&buildOut)
-		if outErr == io.EOF {
-			image.Body.Close()
+		decodeErr := json.NewDecoder(image.Body).Decode(&buildOut)
+		if decodeErr == io.EOF {
 			break
+		}
+		if decodeErr != nil {
+			return errors.New("[ERR:] [DOCKER] => FAILED TO READ BUILD OUTPUT FOR " + imageName + " => " + decodeErr.Error())
+		}
+		if buildOut.Error != "" {
+			return errors.New("[ERR:] [DOCKER] => BUILD FAILED FOR " + imageName + " => " + buildOut.Error)
 		}
 	}
 	return nil
